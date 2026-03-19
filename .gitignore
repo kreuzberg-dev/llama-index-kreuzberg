@@ -1,17 +1,17 @@
-# IDE
-.idea/
-
-# Python
 __pycache__/
-*.py[cod]
+*.pyc
+.coverage
+.idea/
 *.egg-info/
 dist/
 build/
-*.egg
-
-# Virtual environments
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
 .venv/
-venv/
-
-# OS
+.env
+uv.lock
 .DS_Store
+htmlcov/
+.coverage.*
+coverage.xml

@@ -1,0 +1,59 @@
+[project]
+name = "llama-index-kreuzberg"
+version = "0.0.0"
+requires-python = ">=3.10"
+
+[dependency-groups]
+dev = [
+  "mypy>=1.19",
+  "pre-commit>=4",
+  "pytest>=9",
+  "pytest-asyncio>=0.24",
+  "pytest-cov>=6",
+  "ruff>=0.14",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+lint.select = ["ALL"]
+lint.ignore = ["ANN401", "COM812", "D100", "D104", "D107", "D203", "D213", "FIX002", "ISC001", "PLR0913", "TD002", "TD003"]
+lint.per-file-ignores."readers/**/tests/**" = [
+  "ANN",
+  "D",
+  "PERF401",
+  "PERF402",
+  "PLC0415",
+  "PLR2004",
+  "S101",
+  "S105",
+  "S106",
+  "S108",
+  "SLF001",
+  "TC001",
+  "TC003",
+]
+lint.per-file-ignores."node_parsers/**/tests/**" = [
+  "ANN",
+  "D",
+  "PERF401",
+  "PERF402",
+  "PLC0415",
+  "PLR2004",
+  "S101",
+  "S105",
+  "S106",
+  "S108",
+  "SLF001",
+  "TC001",
+  "TC003",
+]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+
+[tool.codespell]
+check-filenames = true
+check-hidden = true
+skip = "*.csv,*.html,*.json,*.jsonl,*.pdf,*.txt,*.ipynb"
