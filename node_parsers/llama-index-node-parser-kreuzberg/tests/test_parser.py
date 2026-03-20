@@ -1,5 +1,8 @@
 """Unit tests for KreuzbergNodeParser."""
 
+import logging
+
+import pytest
 from llama_index.core.schema import BaseNode, Document
 from llama_index.node_parser.kreuzberg import KreuzbergNodeParser
 
@@ -53,25 +56,29 @@ def test_empty_and_whitespace_elements_skipped() -> None:
     assert nodes[1].text == "Also real"
 
 
-def test_missing_elements_warns_and_passes_through() -> None:
+def test_missing_elements_warns_and_passes_through(caplog: pytest.LogCaptureFixture) -> None:
     doc = Document(text="Plain text", id_="plain-001", metadata={"file_path": "/tmp/test.txt"})
     parser = KreuzbergNodeParser()
 
-    nodes = parser.get_nodes_from_documents([doc])
+    with caplog.at_level(logging.WARNING, logger="llama_index.node_parser.kreuzberg.base"):
+        nodes = parser.get_nodes_from_documents([doc])
 
     assert len(nodes) == 1
     assert nodes[0].text == "Plain text"
     assert nodes[0].id_ == "plain-001"
+    assert "no '_kreuzberg_elements' metadata" in caplog.text
 
 
-def test_empty_elements_list_warns_and_passes_through() -> None:
+def test_empty_elements_list_warns_and_passes_through(caplog: pytest.LogCaptureFixture) -> None:
     doc = make_kreuzberg_document(elements=[])
     parser = KreuzbergNodeParser()
 
-    nodes = parser.get_nodes_from_documents([doc])
+    with caplog.at_level(logging.WARNING, logger="llama_index.node_parser.kreuzberg.base"):
+        nodes = parser.get_nodes_from_documents([doc])
 
     assert len(nodes) == 1
     assert nodes[0].text == "Full document text."
+    assert "no '_kreuzberg_elements' metadata" in caplog.text
 
 
 def test_kreuzberg_elements_stripped_from_children_not_passthrough() -> None:

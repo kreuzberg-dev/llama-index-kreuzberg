@@ -55,7 +55,7 @@ def build_metadata(  # noqa: C901
     meta: DocumentMetadata = {}  # type: ignore[assignment]
 
     if file_path is not None:
-        meta["file_name"] = Path(file_path).name
+        meta["file_name"] = file_path.name
         meta["file_path"] = str(file_path)
     elif source is not None:
         meta["file_name"] = source

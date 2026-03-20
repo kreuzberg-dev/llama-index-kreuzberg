@@ -9,11 +9,14 @@ import logging
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from llama_index.core.readers.base import BasePydanticReader
 from llama_index.core.schema import Document
 from llama_index.readers.kreuzberg._config import dict_to_config
+
+if TYPE_CHECKING:
+    from llama_index.readers.kreuzberg._types import PageContent
 from llama_index.readers.kreuzberg._utils import (
     append_tables,
     build_metadata,
@@ -100,7 +103,8 @@ class KreuzbergReader(BasePydanticReader):
     def _serialize_config(self, v: ExtractionConfig | None) -> dict[str, Any] | None:
         if v is None:
             return None
-        return dict[str, Any](json.loads(config_to_json(v)))
+        result: dict[str, Any] = json.loads(config_to_json(v))
+        return result
 
     def _build_config(self) -> ExtractionConfig:
         """Return the ExtractionConfig to use for extraction."""
@@ -197,6 +201,9 @@ class KreuzbergReader(BasePydanticReader):
                     sources=[f"bytes[{i}]" for i in range(len(task.data_list))],
                 )
                 return [(r, None, d) for r, d in zip(results, task.data_list, strict=True) if r]
+            case _ as unreachable:
+                msg = f"Unexpected extraction kind: {unreachable}"
+                raise AssertionError(msg)
 
     def _safe_extract(self, fn: Callable[[], ExtractionResult], source: str) -> ExtractionResult | None:
         try:
@@ -229,6 +236,7 @@ class KreuzbergReader(BasePydanticReader):
         for result, file_path, data in results_with_source:
             if result.pages:
                 for page in result.pages:
+                    page = cast("PageContent", page)
                     page_num = page["page_number"]
                     content = append_tables(
                         page["content"],
@@ -330,6 +338,9 @@ class KreuzbergReader(BasePydanticReader):
                     sources=[f"bytes[{i}]" for i in range(len(task.data_list))],
                 )
                 return [(r, None, d) for r, d in zip(results, task.data_list, strict=True) if r]
+            case _ as unreachable:
+                msg = f"Unexpected extraction kind: {unreachable}"
+                raise AssertionError(msg)
 
     async def _safe_extract_async(self, coro: Awaitable[ExtractionResult], source: str) -> ExtractionResult | None:
         try:

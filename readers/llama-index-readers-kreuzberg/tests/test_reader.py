@@ -157,6 +157,11 @@ def test_different_paths_different_ids() -> None:
     assert generate_doc_id(file_path=Path("/tmp/a.pdf")) != generate_doc_id(file_path=Path("/tmp/b.pdf"))
 
 
+def test_generate_doc_id_no_input_raises() -> None:
+    with pytest.raises(ValueError, match="Either file_path or data must be provided"):
+        generate_doc_id()
+
+
 def test_prepare_single_file() -> None:
     reader = KreuzbergReader()
     task = reader._prepare_extractions(file_path=Path("/tmp/test.pdf"))

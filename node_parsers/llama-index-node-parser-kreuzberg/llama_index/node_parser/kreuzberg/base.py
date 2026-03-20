@@ -102,23 +102,8 @@ class KreuzbergNodeParser(NodeParser):
         return nodes
 
     @override
-    def get_nodes_from_documents(
-        self,
-        documents: Sequence[Document],
-        show_progress: bool = False,
-        **kwargs: Any,
+    def _postprocess_parsed_nodes(
+        self, nodes: list[BaseNode], parent_doc_map: dict[str, Document]
     ) -> list[BaseNode]:
-        """Parse documents into nodes, stripping internal element metadata."""
-        nodes = super().get_nodes_from_documents(documents, show_progress=show_progress, **kwargs)
-        return self._strip_elements_metadata(nodes)
-
-    @override
-    async def aget_nodes_from_documents(
-        self,
-        documents: Sequence[Document],
-        show_progress: bool = False,
-        **kwargs: Any,
-    ) -> list[BaseNode]:
-        """Async version of :meth:`get_nodes_from_documents`."""
-        nodes = await super().aget_nodes_from_documents(documents, show_progress=show_progress, **kwargs)
+        nodes = super()._postprocess_parsed_nodes(nodes, parent_doc_map)
         return self._strip_elements_metadata(nodes)
