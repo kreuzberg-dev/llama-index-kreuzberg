@@ -36,7 +36,13 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class _ExtractionTask:
-    """Validated extraction plan — what to extract, not how."""
+    """Describes what to extract after input validation and routing.
+
+    Built by ``_prepare_extractions``; consumed by ``_extract_sync`` and
+    ``_extract_async`` which dispatch to the appropriate kreuzberg functions.
+    Single-item inputs (including one-element lists) use ``kind="file"`` or
+    ``kind="bytes"``; multi-item inputs use the ``_batch`` variants.
+    """
 
     kind: Literal["file", "file_batch", "bytes", "bytes_batch"]
     paths: tuple[Path, ...] = ()
@@ -125,6 +131,13 @@ def _generate_doc_id(
     return hasher.hexdigest()
 
 
+def _page_field(page: Any, field: str, default: Any = None) -> Any:
+    """Access a page field whether the page is a dict or an object."""
+    if isinstance(page, dict):
+        return page.get(field, default)
+    return getattr(page, field, default)
+
+
 class KreuzbergReader(BasePydanticReader):
     """Reader for 88+ document formats powered by kreuzberg's Rust extraction engine.
 
@@ -176,6 +189,34 @@ class KreuzbergReader(BasePydanticReader):
         """Return the ExtractionConfig to use for extraction."""
         return self.extraction_config or ExtractionConfig()
 
+    def _prepare_extractions(
+        self,
+        *,
+        file_path: str | Path | list[str] | list[Path] | None = None,
+        data: bytes | list[bytes] | None = None,
+        mime_type: str | list[str] | None = None,
+    ) -> _ExtractionTask:
+        """Validate inputs and build an extraction task descriptor."""
+        if file_path is not None:
+            paths = tuple(Path(p) for p in file_path) if isinstance(file_path, list) else (Path(file_path),)
+            if len(paths) == 1:
+                return _ExtractionTask(kind="file", paths=paths)
+            return _ExtractionTask(kind="file_batch", paths=paths)
+
+        if data is not None:
+            if isinstance(data, list):
+                if not isinstance(mime_type, list) or len(data) != len(mime_type):
+                    msg = "data and mime_type must be parallel lists of equal length"
+                    raise ValueError(msg)
+                return _ExtractionTask(kind="bytes_batch", data_list=tuple(data), mime_types=tuple(mime_type))
+            if mime_type is None or isinstance(mime_type, list):
+                msg = "mime_type must be a string for single bytes input"
+                raise ValueError(msg)
+            return _ExtractionTask(kind="bytes", data_list=(data,), mime_types=(mime_type,))
+
+        msg = "Either file_path or data must be provided"
+        raise ValueError(msg)
+
     def load_data(  # noqa: D102
         self,
         file_path: str | Path | list[str] | list[Path] | None = None,
@@ -205,7 +246,7 @@ class KreuzbergReader(BasePydanticReader):
         results_with_source = self._extract_sync(file_path=file_path, data=data, mime_type=mime_type, config=config)
         yield from self._results_to_documents(results_with_source, extra_info)
 
-    def _extract_sync(  # noqa: C901, PLR0912
+    def _extract_sync(
         self,
         *,
         file_path: str | Path | list[str] | list[Path] | None = None,
@@ -213,52 +254,32 @@ class KreuzbergReader(BasePydanticReader):
         mime_type: str | list[str] | None = None,
         config: ExtractionConfig,
     ) -> list[tuple[Any, Path | None, bytes | None]]:
-        results: list[tuple[Any, Path | None, bytes | None]] = []
-
-        if file_path is not None:
-            paths = [Path(p) for p in file_path] if isinstance(file_path, list) else [Path(file_path)]
-            if len(paths) == 1:
-                result = self._safe_extract(
-                    lambda: extract_file_sync(paths[0], config=config),
-                    source=str(paths[0]),
+        task = self._prepare_extractions(file_path=file_path, data=data, mime_type=mime_type)
+        match task.kind:
+            case "file":
+                r = self._safe_extract(
+                    lambda: extract_file_sync(task.paths[0], config=config),
+                    source=str(task.paths[0]),
                 )
-                if result is not None:
-                    results.append((result, paths[0], None))
-            else:
-                batch_results = self._safe_batch_extract(
-                    lambda: batch_extract_files_sync(paths, config=config),
-                    sources=[str(p) for p in paths],
+                return [(r, task.paths[0], None)] if r else []
+            case "file_batch":
+                results = self._safe_batch_extract(
+                    lambda: batch_extract_files_sync(list(task.paths), config=config),
+                    sources=[str(p) for p in task.paths],
                 )
-                for r, p in zip(batch_results, paths, strict=True):
-                    if r is not None:
-                        results.append((r, p, None))
-        elif data is not None:
-            if isinstance(data, list):
-                if not isinstance(mime_type, list) or len(data) != len(mime_type):
-                    msg = "data and mime_type must be parallel lists of equal length"
-                    raise ValueError(msg)
-                batch_results = self._safe_batch_extract(
-                    lambda: batch_extract_bytes_sync(data, mime_type, config=config),
-                    sources=[f"bytes[{i}]" for i in range(len(data))],
-                )
-                for r, d in zip(batch_results, data, strict=True):
-                    if r is not None:
-                        results.append((r, None, d))
-            else:
-                if mime_type is None or isinstance(mime_type, list):
-                    msg = "mime_type must be a string for single bytes input"
-                    raise ValueError(msg)
-                result = self._safe_extract(
-                    lambda: extract_bytes_sync(data, mime_type, config=config),
+                return [(r, p, None) for r, p in zip(results, task.paths, strict=True) if r]
+            case "bytes":
+                r = self._safe_extract(
+                    lambda: extract_bytes_sync(task.data_list[0], task.mime_types[0], config=config),
                     source="bytes",
                 )
-                if result is not None:
-                    results.append((result, None, data))
-        else:
-            msg = "Either file_path or data must be provided"
-            raise ValueError(msg)
-
-        return results
+                return [(r, None, task.data_list[0])] if r else []
+            case "bytes_batch":
+                results = self._safe_batch_extract(
+                    lambda: batch_extract_bytes_sync(list(task.data_list), list(task.mime_types), config=config),
+                    sources=[f"bytes[{i}]" for i in range(len(task.data_list))],
+                )
+                return [(r, None, d) for r, d in zip(results, task.data_list, strict=True) if r]
 
     def _safe_extract(self, fn: Any, source: str) -> Any | None:
         try:
@@ -287,11 +308,11 @@ class KreuzbergReader(BasePydanticReader):
         for result, file_path, data in results_with_source:
             if result.pages:
                 for page in result.pages:
-                    page_num = page.page_number if hasattr(page, "page_number") else 1
-                    page_content = page.content if hasattr(page, "content") else ""
+                    page_num = _page_field(page, "page_number", 1)
+                    page_content = _page_field(page, "content", "")
                     content = self._append_tables_if_needed(
                         page_content,
-                        page.tables if hasattr(page, "tables") else [],
+                        _page_field(page, "tables", []),
                     )
                     meta = _build_metadata(
                         result=result,
@@ -410,7 +431,7 @@ class KreuzbergReader(BasePydanticReader):
         for doc in self._results_to_documents(results_with_source, extra_info):
             yield doc
 
-    async def _extract_async(  # noqa: C901, PLR0912
+    async def _extract_async(
         self,
         *,
         file_path: str | Path | list[str] | list[Path] | None = None,
@@ -418,46 +439,32 @@ class KreuzbergReader(BasePydanticReader):
         mime_type: str | list[str] | None = None,
         config: ExtractionConfig,
     ) -> list[tuple[Any, Path | None, bytes | None]]:
-        results: list[tuple[Any, Path | None, bytes | None]] = []
-
-        if file_path is not None:
-            paths = [Path(p) for p in file_path] if isinstance(file_path, list) else [Path(file_path)]
-            if len(paths) == 1:
-                result = await self._safe_extract_async(extract_file(paths[0], config=config), source=str(paths[0]))
-                if result is not None:
-                    results.append((result, paths[0], None))
-            else:
-                batch_results = await self._safe_batch_extract_async(
-                    batch_extract_files(paths, config=config),
-                    sources=[str(p) for p in paths],
+        task = self._prepare_extractions(file_path=file_path, data=data, mime_type=mime_type)
+        match task.kind:
+            case "file":
+                r = await self._safe_extract_async(
+                    extract_file(task.paths[0], config=config),
+                    source=str(task.paths[0]),
                 )
-                for r, p in zip(batch_results, paths, strict=True):
-                    if r is not None:
-                        results.append((r, p, None))
-        elif data is not None:
-            if isinstance(data, list):
-                if not isinstance(mime_type, list) or len(data) != len(mime_type):
-                    msg = "data and mime_type must be parallel lists of equal length"
-                    raise ValueError(msg)
-                batch_results = await self._safe_batch_extract_async(
-                    batch_extract_bytes(data, mime_type, config=config),
-                    sources=[f"bytes[{i}]" for i in range(len(data))],
+                return [(r, task.paths[0], None)] if r else []
+            case "file_batch":
+                results = await self._safe_batch_extract_async(
+                    batch_extract_files(list(task.paths), config=config),
+                    sources=[str(p) for p in task.paths],
                 )
-                for r, d in zip(batch_results, data, strict=True):
-                    if r is not None:
-                        results.append((r, None, d))
-            else:
-                if mime_type is None or isinstance(mime_type, list):
-                    msg = "mime_type must be a string for single bytes input"
-                    raise ValueError(msg)
-                result = await self._safe_extract_async(extract_bytes(data, mime_type, config=config), source="bytes")
-                if result is not None:
-                    results.append((result, None, data))
-        else:
-            msg = "Either file_path or data must be provided"
-            raise ValueError(msg)
-
-        return results
+                return [(r, p, None) for r, p in zip(results, task.paths, strict=True) if r]
+            case "bytes":
+                r = await self._safe_extract_async(
+                    extract_bytes(task.data_list[0], task.mime_types[0], config=config),
+                    source="bytes",
+                )
+                return [(r, None, task.data_list[0])] if r else []
+            case "bytes_batch":
+                results = await self._safe_batch_extract_async(
+                    batch_extract_bytes(list(task.data_list), list(task.mime_types), config=config),
+                    sources=[f"bytes[{i}]" for i in range(len(task.data_list))],
+                )
+                return [(r, None, d) for r, d in zip(results, task.data_list, strict=True) if r]
 
     async def _safe_extract_async(self, coro: Any, source: str) -> Any | None:
         try:

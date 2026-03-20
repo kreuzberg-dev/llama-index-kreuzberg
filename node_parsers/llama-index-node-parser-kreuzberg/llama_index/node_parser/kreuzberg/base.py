@@ -83,7 +83,8 @@ class KreuzbergNodeParser(NodeParser):
 
         return output
 
-    def _strip_elements_metadata(self, nodes: List[BaseNode]) -> List[BaseNode]:
+    @staticmethod
+    def _strip_elements_metadata(nodes: List[BaseNode]) -> List[BaseNode]:
         """Remove _kreuzberg_elements from child TextNodes only (N5).
 
         Passthrough documents keep their metadata untouched.

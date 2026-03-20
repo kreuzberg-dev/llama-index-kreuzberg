@@ -9,8 +9,6 @@ sub-sub-config field mappings are declared as static dicts rather than
 derived from annotations.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from kreuzberg import (
@@ -79,6 +77,7 @@ _NESTED_FIELD_MAP: dict[tuple[type, str], type] = {
     (KeywordConfig, "yake_params"): YakeParams,
 }
 
+
 def _known_fields(cls: type) -> frozenset[str]:
     """Return the set of field names accepted by a PyO3 config class constructor.
 
@@ -87,7 +86,7 @@ def _known_fields(cls: type) -> frozenset[str]:
     """
     try:
         return frozenset(a for a in dir(cls()) if not a.startswith("_"))
-    except Exception:
+    except Exception:  # noqa: BLE001 — PyO3 classes may raise arbitrary exceptions
         return frozenset()
 
 
@@ -127,6 +126,7 @@ def dict_to_config(d: dict[str, Any]) -> ExtractionConfig:
 
     Returns:
         A fully typed ExtractionConfig instance.
+
     """
     accepted = _known_fields(ExtractionConfig)
     kwargs: dict[str, Any] = {}

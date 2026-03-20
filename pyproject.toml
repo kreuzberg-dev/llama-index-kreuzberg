@@ -53,6 +53,10 @@ lint.per-file-ignores."node_parsers/**/tests/**" = [
 python_version = "3.10"
 strict = true
 
+[[tool.mypy.overrides]]
+module = ["kreuzberg", "kreuzberg.*"]
+follow_imports = "skip"
+
 [tool.codespell]
 check-filenames = true
 check-hidden = true

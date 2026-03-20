@@ -1,1 +1,70 @@
-# TODO: shared fixtures for reader tests
+"""Shared test fixtures for KreuzbergReader tests."""
+
+from typing import Any
+from unittest.mock import MagicMock
+
+from kreuzberg import ExtractionResult
+
+
+def make_extraction_result(
+    content: str = "Hello world",
+    mime_type: str = "application/pdf",
+    metadata: dict[str, Any] | None = None,
+    pages: list[Any] | None = None,
+    elements: list[Any] | None = None,
+    tables: list[Any] | None = None,
+    images: list[Any] | None = None,
+    quality_score: float | None = 0.95,
+    detected_languages: list[str] | None = None,
+    extracted_keywords: list[Any] | None = None,
+    processing_warnings: list[Any] | None = None,
+    annotations: list[Any] | None = None,
+    page_count: int = 1,
+) -> MagicMock:
+    """Create a mock ExtractionResult with sensible defaults."""
+    result = MagicMock(spec=ExtractionResult)
+    result.content = content
+    result.mime_type = mime_type
+    result.metadata = metadata or {
+        "title": "Test Document",
+        "subject": None,
+        "authors": ["Author One"],
+        "keywords": ["test"],
+        "language": "eng",
+        "created_at": "2026-01-01T00:00:00Z",
+        "modified_at": None,
+        "created_by": "TestApp",
+        "modified_by": None,
+        "format_type": "pdf",
+    }
+    result.tables = tables or []
+    result.pages = pages
+    result.elements = elements
+    result.images = images
+    result.quality_score = quality_score
+    result.detected_languages = detected_languages or ["eng"]
+    result.extracted_keywords = extracted_keywords or []
+    result.processing_warnings = processing_warnings or []
+    result.annotations = annotations
+    result.output_format = "plain"
+    result.result_format = "unified"
+    result.get_page_count.return_value = page_count
+    return result
+
+
+def make_page_content(
+    page_number: int = 1,
+    content: str = "Page content",
+    tables: list[Any] | None = None,
+    images: list[Any] | None = None,
+    *,
+    is_blank: bool | None = False,
+) -> MagicMock:
+    """Create a mock PageContent."""
+    page = MagicMock()
+    page.page_number = page_number
+    page.content = content
+    page.tables = tables or []
+    page.images = images or []
+    page.is_blank = is_blank
+    return page
