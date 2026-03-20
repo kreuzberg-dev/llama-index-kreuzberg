@@ -39,8 +39,8 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "kreuzberg>=4.4.6",
-  "llama-index-core>=0.12,<0.15",
+  "kreuzberg>=4.4.6,<5",
+  "llama-index-core>=0.13.0,<0.15",
 ]
 maintainers = [{ name = "Goldziher" }]
 urls.Homepage = "https://github.com/kreuzberg-dev/llama-index-kreuzberg"
