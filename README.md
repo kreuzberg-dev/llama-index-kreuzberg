@@ -27,15 +27,25 @@ reader = KreuzbergReader()
 documents = reader.load_data("report.pdf")
 ```
 
-### With Element-Aware Node Parsing
+## How They Work Together
+
+The **reader** extracts files into LlamaIndex `Document` objects. The **node parser** splits those documents into semantic `TextNode` objects based on structural elements (headings, paragraphs, tables, code blocks). They are independent packages but designed to complement each other.
+
+The bridge between them is `ExtractionConfig(result_format="element_based")`. When the reader is configured this way, it produces `_kreuzberg_elements` metadata that the node parser consumes for structure-aware splitting. Without this config, the node parser will pass documents through unchanged with a warning.
 
 ```python
+from kreuzberg import ExtractionConfig
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.readers.kreuzberg import KreuzbergReader
 from llama_index.node_parser.kreuzberg import KreuzbergNodeParser
 
-documents = KreuzbergReader().load_data("report.pdf")
+# Extract with element-based format for structure-aware processing
+reader = KreuzbergReader(
+    extraction_config=ExtractionConfig(result_format="element_based")
+)
+documents = reader.load_data("report.pdf")
 
+# Element-aware pipeline
 pipeline = IngestionPipeline(
     transformations=[
         KreuzbergNodeParser(),
@@ -43,6 +53,11 @@ pipeline = IngestionPipeline(
 )
 nodes = pipeline.run(documents=documents)
 ```
+
+**When to use what:**
+
+- **Reader alone** with built-in splitters (e.g. `SentenceSplitter`): simpler setup, text-level chunking.
+- **Reader + node parser**: structure-aware chunking with element types preserved for filtering and retrieval.
 
 ## License
 
