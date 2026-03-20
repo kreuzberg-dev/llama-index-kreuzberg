@@ -58,13 +58,13 @@ def make_page_content(
     tables: list[Any] | None = None,
     images: list[Any] | None = None,
     *,
-    is_blank: bool | None = False,
-) -> MagicMock:
-    """Create a mock PageContent."""
-    page = MagicMock()
-    page.page_number = page_number
-    page.content = content
-    page.tables = tables or []
-    page.images = images or []
-    page.is_blank = is_blank
-    return page
+    is_blank: bool = False,
+) -> dict[str, Any]:
+    """Create a PageContent dict matching kreuzberg's runtime format."""
+    return {
+        "page_number": page_number,
+        "content": content,
+        "tables": tables or [],
+        "images": images or [],
+        "is_blank": is_blank,
+    }

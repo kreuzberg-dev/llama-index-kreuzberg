@@ -1,10 +1,8 @@
 """Unit tests for KreuzbergNodeParser."""
 
-from __future__ import annotations
-
 from llama_index.core.schema import BaseNode, Document
-
 from llama_index.node_parser.kreuzberg import KreuzbergNodeParser
+
 from tests.conftest import make_element, make_kreuzberg_document
 
 

@@ -9,12 +9,12 @@ from llama_index.readers.kreuzberg import KreuzbergReader
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
-@pytest.fixture()
+@pytest.fixture
 def reader() -> KreuzbergReader:
     return KreuzbergReader()
 
 
-@pytest.fixture()
+@pytest.fixture
 def fixtures_dir() -> Path:
     return FIXTURES
 
@@ -54,9 +54,7 @@ def test_bytes_extraction_matches_file(reader: KreuzbergReader) -> None:
 
 
 def test_per_page_splitting(fixtures_dir: Path) -> None:
-    reader = KreuzbergReader(
-        extraction_config=ExtractionConfig(pages=PageConfig(extract_pages=True))
-    )
+    reader = KreuzbergReader(extraction_config=ExtractionConfig(pages=PageConfig(extract_pages=True)))
     docs = reader.load_data(fixtures_dir / "sample.pdf")
 
     assert len(docs) == 3, f"sample.pdf has 3 pages, got {len(docs)} docs"
@@ -117,16 +115,14 @@ def test_sdr_filename_as_id(reader: KreuzbergReader, fixtures_dir: Path) -> None
     docs = sdr.load_data()
 
     for doc in docs:
-        assert "_part_" in doc.id_, (
-            f"SDR should set ID to {{filepath}}_part_{{i}}, got {doc.id_}"
-        )
+        assert "_part_" in doc.id_, f"SDR should set ID to {{filepath}}_part_{{i}}, got {doc.id_}"
         assert doc.metadata["file_name"] in doc.id_
 
 
 # --- Scenario 6: User uses async SDR extraction ---
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_sdr_async_extraction(reader: KreuzbergReader, fixtures_dir: Path) -> None:
     from llama_index.core import SimpleDirectoryReader
 
@@ -173,17 +169,13 @@ def test_pipeline_deduplication(reader: KreuzbergReader, fixtures_dir: Path) -> 
 
     # Second run — identical docs, should deduplicate
     nodes_second = pipeline.run(documents=docs)
-    assert len(nodes_second) == 0, (
-        "Second run with identical docs should produce no new nodes (dedup by hash)"
-    )
+    assert len(nodes_second) == 0, "Second run with identical docs should produce no new nodes (dedup by hash)"
 
 
 # --- Scenario 8: User re-extracts with changed metadata, pipeline re-processes ---
 
 
-def test_pipeline_reprocesses_on_metadata_change(
-    reader: KreuzbergReader, fixtures_dir: Path
-) -> None:
+def test_pipeline_reprocesses_on_metadata_change(reader: KreuzbergReader, fixtures_dir: Path) -> None:
     from llama_index.core.ingestion import DocstoreStrategy, IngestionPipeline
     from llama_index.core.node_parser import SentenceSplitter
     from llama_index.core.storage.docstore import SimpleDocumentStore
@@ -207,6 +199,4 @@ def test_pipeline_reprocesses_on_metadata_change(
     assert docs_v1[0].id_ == docs_v2[0].id_, "Same file should produce same doc ID"
 
     nodes_v2 = pipeline.run(documents=docs_v2)
-    assert len(nodes_v2) > 0, (
-        "Changed metadata should change doc hash, causing pipeline to re-process"
-    )
+    assert len(nodes_v2) > 0, "Changed metadata should change doc hash, causing pipeline to re-process"

@@ -8,11 +8,10 @@ import pytest
 from kreuzberg import ExtractionConfig, OcrConfig, PageConfig
 from llama_index.core.readers.base import BasePydanticReader
 from llama_index.readers.kreuzberg import KreuzbergReader
+from llama_index.readers.kreuzberg._utils import build_metadata, generate_doc_id
 from pydantic import ValidationError
 
 from tests.conftest import make_extraction_result, make_page_content
-
-# --- Class structure (C11) ---
 
 
 def test_class() -> None:
@@ -34,9 +33,6 @@ def test_default_fields() -> None:
     reader = KreuzbergReader()
     assert reader.raise_on_error is False
     assert reader.extraction_config is None
-
-
-# --- Serialization ---
 
 
 def test_to_dict_without_config() -> None:
@@ -82,14 +78,10 @@ def test_rejects_invalid_extraction_config() -> None:
         KreuzbergReader(extraction_config=42)
 
 
-# --- Metadata ---
-
-
 def test_standard_metadata_fields() -> None:
-    from llama_index.readers.kreuzberg.base import _build_metadata
 
     result = make_extraction_result(page_count=5)
-    meta = _build_metadata(result=result, file_path=Path("/tmp/test.pdf"))
+    meta = build_metadata(result=result, file_path=Path("/tmp/test.pdf"))
     assert meta["file_name"] == "test.pdf"
     assert meta["file_path"] == "/tmp/test.pdf"
     assert meta["file_type"] == "application/pdf"
@@ -97,10 +89,9 @@ def test_standard_metadata_fields() -> None:
 
 
 def test_document_metadata_fields() -> None:
-    from llama_index.readers.kreuzberg.base import _build_metadata
 
     result = make_extraction_result()
-    meta = _build_metadata(result=result, file_path=Path("/tmp/test.pdf"))
+    meta = build_metadata(result=result, file_path=Path("/tmp/test.pdf"))
     assert meta["title"] == "Test Document"
     assert meta["authors"] == ["Author One"]
     assert meta["language"] == "eng"
@@ -108,19 +99,17 @@ def test_document_metadata_fields() -> None:
 
 
 def test_extraction_result_fields() -> None:
-    from llama_index.readers.kreuzberg.base import _build_metadata
 
     result = make_extraction_result(quality_score=0.88)
-    meta = _build_metadata(result=result, file_path=Path("/tmp/test.pdf"))
+    meta = build_metadata(result=result, file_path=Path("/tmp/test.pdf"))
     assert meta["quality_score"] == 0.88
     assert meta["detected_languages"] == ["eng"]
 
 
 def test_extra_info_overrides() -> None:
-    from llama_index.readers.kreuzberg.base import _build_metadata
 
     result = make_extraction_result()
-    meta = _build_metadata(
+    meta = build_metadata(
         result=result,
         file_path=Path("/tmp/test.pdf"),
         extra_info={"title": "Override", "custom": "value"},
@@ -130,54 +119,42 @@ def test_extra_info_overrides() -> None:
 
 
 def test_bytes_source_metadata() -> None:
-    from llama_index.readers.kreuzberg.base import _build_metadata
 
     result = make_extraction_result()
-    meta = _build_metadata(result=result, source="bytes_input")
+    meta = build_metadata(result=result, source="bytes_input")
     assert meta["file_name"] == "bytes_input"
     assert meta["file_path"] == "bytes_input"
 
 
-# --- ID generation ---
-
-
 def test_file_path_id_deterministic() -> None:
-    from llama_index.readers.kreuzberg.base import _generate_doc_id
 
     path = Path("/tmp/test.pdf")
-    assert _generate_doc_id(file_path=path) == _generate_doc_id(file_path=path)
+    assert generate_doc_id(file_path=path) == generate_doc_id(file_path=path)
 
 
 def test_file_path_id_with_page() -> None:
-    from llama_index.readers.kreuzberg.base import _generate_doc_id
 
     path = Path("/tmp/test.pdf")
-    id_no_page = _generate_doc_id(file_path=path)
-    id_page_1 = _generate_doc_id(file_path=path, page_number=1)
-    id_page_2 = _generate_doc_id(file_path=path, page_number=2)
+    id_no_page = generate_doc_id(file_path=path)
+    id_page_1 = generate_doc_id(file_path=path, page_number=1)
+    id_page_2 = generate_doc_id(file_path=path, page_number=2)
     assert id_no_page != id_page_1
     assert id_page_1 != id_page_2
 
 
 def test_bytes_id_deterministic() -> None:
-    from llama_index.readers.kreuzberg.base import _generate_doc_id
 
-    assert _generate_doc_id(data=b"hello") == _generate_doc_id(data=b"hello")
+    assert generate_doc_id(data=b"hello") == generate_doc_id(data=b"hello")
 
 
 def test_bytes_id_with_page() -> None:
-    from llama_index.readers.kreuzberg.base import _generate_doc_id
 
-    assert _generate_doc_id(data=b"hello") != _generate_doc_id(data=b"hello", page_number=1)
+    assert generate_doc_id(data=b"hello") != generate_doc_id(data=b"hello", page_number=1)
 
 
 def test_different_paths_different_ids() -> None:
-    from llama_index.readers.kreuzberg.base import _generate_doc_id
 
-    assert _generate_doc_id(file_path=Path("/tmp/a.pdf")) != _generate_doc_id(file_path=Path("/tmp/b.pdf"))
-
-
-# --- Extraction preparation ---
+    assert generate_doc_id(file_path=Path("/tmp/a.pdf")) != generate_doc_id(file_path=Path("/tmp/b.pdf"))
 
 
 def test_prepare_single_file() -> None:
@@ -248,9 +225,6 @@ def test_prepare_batch_bytes_length_mismatch_raises() -> None:
         reader._prepare_extractions(data=[b"a", b"b"], mime_type=["application/pdf"])
 
 
-# --- Single file sync ---
-
-
 @patch("llama_index.readers.kreuzberg.base.extract_file_sync")
 def test_single_file_returns_document(mock_extract: MagicMock) -> None:
     mock_extract.return_value = make_extraction_result(content="Hello PDF")
@@ -306,9 +280,6 @@ def test_extraction_config_passed(mock_extract: MagicMock) -> None:
     assert mock_extract.call_args is not None
 
 
-# --- Batch file sync ---
-
-
 @patch("llama_index.readers.kreuzberg.base.batch_extract_files_sync")
 def test_batch_files(mock_batch: MagicMock) -> None:
     mock_batch.return_value = [
@@ -328,9 +299,6 @@ def test_batch_unique_ids(mock_batch: MagicMock) -> None:
     reader = KreuzbergReader()
     docs = reader.load_data([Path("/tmp/a.pdf"), Path("/tmp/b.pdf")])
     assert docs[0].id_ != docs[1].id_
-
-
-# --- Bytes sync ---
 
 
 @patch("llama_index.readers.kreuzberg.base.extract_bytes_sync")
@@ -366,9 +334,6 @@ def test_no_input_raises() -> None:
     reader = KreuzbergReader()
     with pytest.raises(ValueError, match="Either file_path or data"):
         reader.load_data()
-
-
-# --- Per-page mode ---
 
 
 @patch("llama_index.readers.kreuzberg.base.extract_file_sync")
@@ -409,9 +374,6 @@ def test_per_page_unique_ids(mock_extract: MagicMock) -> None:
     assert docs[0].id_ != docs[1].id_
 
 
-# --- Error handling ---
-
-
 @patch("llama_index.readers.kreuzberg.base.extract_file_sync")
 def test_tolerant_mode_skips_errors(mock_extract: MagicMock) -> None:
     mock_extract.side_effect = RuntimeError("extraction failed")
@@ -434,9 +396,6 @@ def test_tolerant_batch_skips_errors(mock_batch: MagicMock) -> None:
     reader = KreuzbergReader(raise_on_error=False)
     docs = reader.load_data([Path("/tmp/a.pdf"), Path("/tmp/b.pdf")])
     assert len(docs) == 0
-
-
-# --- Element metadata ---
 
 
 @patch("llama_index.readers.kreuzberg.base.extract_file_sync")
@@ -472,24 +431,20 @@ def test_no_elements_when_unified(mock_extract: MagicMock) -> None:
     assert docs[0].excluded_llm_metadata_keys == []
 
 
-# --- Image extraction ---
-
-
 @patch("llama_index.readers.kreuzberg.base.extract_file_sync")
 def test_images_base64_encoded(mock_extract: MagicMock) -> None:
-    mock_img = MagicMock()
-    mock_img.data = b"\x89PNG\r\n"
-    mock_img.format = "PNG"
-    mock_img.image_index = 0
-    mock_img.page_number = 1
-    mock_img.width = 100
-    mock_img.height = 200
-    mock_img.colorspace = "RGB"
-    mock_img.bits_per_component = 8
-    mock_img.is_mask = False
-    mock_img.description = "test image"
-    mock_img.bounding_box = None
-    mock_img.ocr_result = None
+    mock_img = {
+        "data": b"\x89PNG\r\n",
+        "format": "PNG",
+        "image_index": 0,
+        "page_number": 1,
+        "width": 100,
+        "height": 200,
+        "colorspace": "RGB",
+        "bits_per_component": 8,
+        "is_mask": False,
+        "description": "test image",
+    }
     result = make_extraction_result()
     result.images = [mock_img]
     mock_extract.return_value = result
@@ -500,9 +455,6 @@ def test_images_base64_encoded(mock_extract: MagicMock) -> None:
     assert images[0]["data"] == base64.b64encode(b"\x89PNG\r\n").decode("ascii")
     assert images[0]["format"] == "PNG"
     assert images[0]["width"] == 100
-
-
-# --- Table handling ---
 
 
 @patch("llama_index.readers.kreuzberg.base.extract_file_sync")
@@ -529,9 +481,6 @@ def test_table_not_duplicated_when_inlined(mock_extract: MagicMock) -> None:
     reader = KreuzbergReader()
     docs = reader.load_data(Path("/tmp/test.pdf"))
     assert docs[0].text.count("| A | B |") == 1
-
-
-# --- Async extraction ---
 
 
 @patch("llama_index.readers.kreuzberg.base.extract_file", new_callable=AsyncMock)

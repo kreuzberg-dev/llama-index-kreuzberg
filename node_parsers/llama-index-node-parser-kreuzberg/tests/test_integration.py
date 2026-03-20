@@ -7,8 +7,8 @@ from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core.embeddings.mock_embed_model import MockEmbedding
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.node_parser import SentenceSplitter
-
 from llama_index.node_parser.kreuzberg import KreuzbergNodeParser
+
 from tests.conftest import make_kreuzberg_document
 
 
@@ -73,7 +73,7 @@ async def test_acall_produces_same_results_as_sync() -> None:
     async_nodes = await parser.acall([doc])
 
     assert len(async_nodes) == len(sync_nodes)
-    for sync_node, async_node in zip(sync_nodes, async_nodes):
+    for sync_node, async_node in zip(sync_nodes, async_nodes, strict=True):
         assert sync_node.text == async_node.text
         assert sync_node.metadata["element_type"] == async_node.metadata["element_type"]
         assert "_kreuzberg_elements" not in async_node.metadata

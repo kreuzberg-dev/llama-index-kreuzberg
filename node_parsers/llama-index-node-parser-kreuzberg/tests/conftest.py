@@ -1,6 +1,6 @@
 """Shared test fixtures for KreuzbergNodeParser tests."""
 
-from __future__ import annotations
+from typing import Any
 
 from llama_index.core.schema import Document
 
@@ -11,7 +11,7 @@ def make_element(
     element_id: str = "el-001",
     page_number: int | None = 1,
     element_index: int | None = 0,
-) -> dict:
+) -> dict[str, Any]:
     """Create a kreuzberg Element dict matching the Element TypedDict shape."""
     return {
         "element_id": element_id,
@@ -27,7 +27,7 @@ def make_element(
 
 
 def make_kreuzberg_document(
-    elements: list[dict] | None = None,
+    elements: list[dict[str, Any]] | None = None,
     text: str = "Full document text.",
     doc_id: str = "doc-001",
 ) -> Document:
@@ -36,7 +36,13 @@ def make_kreuzberg_document(
         elements = [
             make_element(element_type="title", text="Document Title", element_id="el-001", element_index=0),
             make_element(element_type="narrative_text", text="First paragraph.", element_id="el-002", element_index=1),
-            make_element(element_type="table", text="| A | B |\n| 1 | 2 |", element_id="el-003", page_number=2, element_index=2),
+            make_element(
+                element_type="table",
+                text="| A | B |\n| 1 | 2 |",
+                element_id="el-003",
+                page_number=2,
+                element_index=2,
+            ),
         ]
     return Document(
         text=text,

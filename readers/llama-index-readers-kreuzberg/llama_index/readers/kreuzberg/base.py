@@ -4,11 +4,9 @@ Wraps kreuzberg's Rust-core extraction engine with true async support,
 maximalist metadata, and lossless pipeline persistence.
 """
 
-import base64
-import hashlib
 import json
 import logging
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -16,10 +14,17 @@ from typing import Any, Literal
 from llama_index.core.readers.base import BasePydanticReader
 from llama_index.core.schema import Document
 from llama_index.readers.kreuzberg._config import dict_to_config
+from llama_index.readers.kreuzberg._utils import (
+    append_tables,
+    build_metadata,
+    excluded_keys,
+    generate_doc_id,
+)
 from pydantic import Field, field_serializer, field_validator
 
 from kreuzberg import (
     ExtractionConfig,
+    ExtractionResult,
     batch_extract_bytes,
     batch_extract_bytes_sync,
     batch_extract_files,
@@ -48,94 +53,6 @@ class _ExtractionTask:
     paths: tuple[Path, ...] = ()
     data_list: tuple[bytes, ...] = ()
     mime_types: tuple[str, ...] = ()
-
-
-def _build_metadata(  # noqa: C901
-    result: Any,
-    file_path: Path | None = None,
-    source: str | None = None,
-    extra_info: dict[str, Any] | None = None,
-    page_number: int | None = None,
-) -> dict[str, Any]:
-    """Flatten ExtractionResult into a metadata dict."""
-    meta: dict[str, Any] = {}
-
-    if file_path is not None:
-        meta["file_name"] = Path(file_path).name
-        meta["file_path"] = str(file_path)
-    elif source is not None:
-        meta["file_name"] = source
-        meta["file_path"] = source
-
-    meta["file_type"] = result.mime_type
-    meta["total_pages"] = result.get_page_count()
-
-    if page_number is not None:
-        meta["page_number"] = page_number
-
-    kreuzberg_meta = result.metadata
-    if isinstance(kreuzberg_meta, dict):
-        meta.update({k: v for k, v in kreuzberg_meta.items() if v is not None})
-
-    if result.quality_score is not None:
-        meta["quality_score"] = result.quality_score
-    if result.detected_languages is not None:
-        meta["detected_languages"] = result.detected_languages
-    if result.output_format is not None:
-        meta["output_format"] = result.output_format
-    if result.processing_warnings:
-        meta["processing_warnings"] = [
-            {"source": w.source, "message": w.message} if hasattr(w, "source") else str(w)
-            for w in result.processing_warnings
-        ]
-    if result.extracted_keywords:
-        meta["extracted_keywords"] = [
-            {"text": kw.text, "score": kw.score, "algorithm": kw.algorithm} if hasattr(kw, "text") else kw
-            for kw in result.extracted_keywords
-        ]
-    if result.annotations:
-        meta["annotations"] = [
-            {
-                "annotation_type": a.annotation_type,
-                "content": a.content,
-                "page_number": a.page_number,
-            }
-            if hasattr(a, "annotation_type")
-            else a
-            for a in result.annotations
-        ]
-
-    if extra_info:
-        meta.update(extra_info)
-
-    return meta
-
-
-def _generate_doc_id(
-    *,
-    file_path: Path | None = None,
-    data: bytes | None = None,
-    page_number: int | None = None,
-) -> str:
-    """Generate a deterministic document ID via SHA-256."""
-    if file_path is None and data is None:
-        msg = "Either file_path or data must be provided"
-        raise ValueError(msg)
-    hasher = hashlib.sha256()
-    if file_path is not None:
-        hasher.update(str(file_path.resolve()).encode())
-    elif data is not None:
-        hasher.update(data)
-    if page_number is not None:
-        hasher.update(str(page_number).encode())
-    return hasher.hexdigest()
-
-
-def _page_field(page: Any, field: str, default: Any = None) -> Any:
-    """Access a page field whether the page is a dict or an object."""
-    if isinstance(page, dict):
-        return page.get(field, default)
-    return getattr(page, field, default)
 
 
 class KreuzbergReader(BasePydanticReader):
@@ -169,7 +86,7 @@ class KreuzbergReader(BasePydanticReader):
 
     @field_validator("extraction_config", mode="before")
     @classmethod
-    def _validate_config(cls, v: Any) -> ExtractionConfig | None:
+    def _validate_config(cls, v: ExtractionConfig | dict[str, Any] | None) -> ExtractionConfig | None:
         if v is None:
             return None
         if isinstance(v, dict):
@@ -189,8 +106,8 @@ class KreuzbergReader(BasePydanticReader):
         """Return the ExtractionConfig to use for extraction."""
         return self.extraction_config or ExtractionConfig()
 
+    @staticmethod
     def _prepare_extractions(
-        self,
         *,
         file_path: str | Path | list[str] | list[Path] | None = None,
         data: bytes | list[bytes] | None = None,
@@ -253,7 +170,7 @@ class KreuzbergReader(BasePydanticReader):
         data: bytes | list[bytes] | None = None,
         mime_type: str | list[str] | None = None,
         config: ExtractionConfig,
-    ) -> list[tuple[Any, Path | None, bytes | None]]:
+    ) -> list[tuple[ExtractionResult, Path | None, bytes | None]]:
         task = self._prepare_extractions(file_path=file_path, data=data, mime_type=mime_type)
         match task.kind:
             case "file":
@@ -281,7 +198,7 @@ class KreuzbergReader(BasePydanticReader):
                 )
                 return [(r, None, d) for r, d in zip(results, task.data_list, strict=True) if r]
 
-    def _safe_extract(self, fn: Any, source: str) -> Any | None:
+    def _safe_extract(self, fn: Callable[[], ExtractionResult], source: str) -> ExtractionResult | None:
         try:
             return fn()
         except Exception:
@@ -290,7 +207,11 @@ class KreuzbergReader(BasePydanticReader):
             logger.warning("Failed to extract %s", source, exc_info=True)
             return None
 
-    def _safe_batch_extract(self, fn: Any, sources: list[str]) -> list[Any | None]:
+    def _safe_batch_extract(
+        self,
+        fn: Callable[[], Iterable[ExtractionResult]],
+        sources: list[str],
+    ) -> list[ExtractionResult | None]:
         try:
             return list(fn())
         except Exception:
@@ -299,107 +220,51 @@ class KreuzbergReader(BasePydanticReader):
             logger.warning("Batch extraction failed for %s", ", ".join(sources), exc_info=True)
             return [None] * len(sources)
 
+    @staticmethod
     def _results_to_documents(
-        self,
-        results_with_source: list[tuple[Any, Path | None, bytes | None]],
+        results_with_source: list[tuple[ExtractionResult, Path | None, bytes | None]],
         extra_info: dict[str, Any] | None = None,
     ) -> Iterable[Document]:
         """Yield Documents from extraction results, one per page when pages are present."""
         for result, file_path, data in results_with_source:
             if result.pages:
                 for page in result.pages:
-                    page_num = _page_field(page, "page_number", 1)
-                    page_content = _page_field(page, "content", "")
-                    content = self._append_tables_if_needed(
-                        page_content,
-                        _page_field(page, "tables", []),
+                    page_num = page["page_number"]
+                    content = append_tables(
+                        page["content"],
+                        page["tables"],
                     )
-                    meta = _build_metadata(
+                    meta = build_metadata(
                         result=result,
                         file_path=file_path,
                         source="bytes" if data is not None else None,
                         extra_info=extra_info,
                         page_number=page_num,
                     )
-                    excluded_keys: list[str] = []
-                    if result.elements is not None:
-                        meta["_kreuzberg_elements"] = result.elements
-                        excluded_keys = ["_kreuzberg_elements"]
-                    if result.images:
-                        meta["images"] = self._serialize_images(result.images, page_number=page_num)
-                        excluded_keys.append("images")
+                    excl = excluded_keys(meta)
                     yield Document(
                         text=content,
-                        id_=_generate_doc_id(file_path=file_path, data=data, page_number=page_num),
+                        id_=generate_doc_id(file_path=file_path, data=data, page_number=page_num),
                         metadata=meta,
-                        excluded_llm_metadata_keys=excluded_keys,
-                        excluded_embed_metadata_keys=excluded_keys,
+                        excluded_llm_metadata_keys=excl,
+                        excluded_embed_metadata_keys=excl,
                     )
             else:
-                content = self._append_tables_if_needed(result.content, result.tables)
-                meta = _build_metadata(
+                content = append_tables(result.content, result.tables)
+                meta = build_metadata(
                     result=result,
                     file_path=file_path,
                     source="bytes" if data is not None else None,
                     extra_info=extra_info,
                 )
-                excluded_keys = []
-                if result.elements is not None:
-                    meta["_kreuzberg_elements"] = result.elements
-                    excluded_keys = ["_kreuzberg_elements"]
-                if result.images:
-                    meta["images"] = self._serialize_images(result.images)
-                    excluded_keys.append("images")
+                excl = excluded_keys(meta)
                 yield Document(
                     text=content,
-                    id_=_generate_doc_id(file_path=file_path, data=data),
+                    id_=generate_doc_id(file_path=file_path, data=data),
                     metadata=meta,
-                    excluded_llm_metadata_keys=excluded_keys,
-                    excluded_embed_metadata_keys=excluded_keys,
+                    excluded_llm_metadata_keys=excl,
+                    excluded_embed_metadata_keys=excl,
                 )
-
-    @staticmethod
-    def _append_tables_if_needed(content: str, tables: list[Any]) -> str:
-        """Append table markdown to content when tables are not already included."""
-        if not tables:
-            return content
-        for table in tables:
-            table_md = table.markdown if hasattr(table, "markdown") else str(table)
-            if table_md and table_md.strip() not in content:
-                content = content.rstrip() + "\n\n" + table_md
-        return content
-
-    @staticmethod
-    def _serialize_images(images: list[Any], page_number: int | None = None) -> list[dict[str, Any]]:
-        """Serialize image objects to JSON-safe dicts, filtering by page when given."""
-        serialized = []
-        for img in images:
-            if page_number is not None:
-                img_page = getattr(img, "page_number", None)
-                if img_page is not None and img_page != page_number:
-                    continue
-            entry: dict[str, Any] = {
-                "format": getattr(img, "format", "unknown"),
-                "image_index": getattr(img, "image_index", 0),
-                "page_number": getattr(img, "page_number", 0),
-                "width": getattr(img, "width", 0),
-                "height": getattr(img, "height", 0),
-                "colorspace": getattr(img, "colorspace", ""),
-                "bits_per_component": getattr(img, "bits_per_component", 0),
-                "is_mask": getattr(img, "is_mask", False),
-                "description": getattr(img, "description", ""),
-            }
-            img_data = getattr(img, "data", None)
-            if img_data is not None:
-                entry["data"] = base64.b64encode(img_data).decode("ascii")
-            bbox = getattr(img, "bounding_box", None)
-            if bbox is not None:
-                entry["bounding_box"] = bbox
-            ocr_result = getattr(img, "ocr_result", None)
-            if ocr_result is not None:
-                entry["ocr_result"] = ocr_result.content if hasattr(ocr_result, "content") else str(ocr_result)
-            serialized.append(entry)
-        return serialized
 
     async def aload_data(  # noqa: D102
         self,
@@ -438,7 +303,7 @@ class KreuzbergReader(BasePydanticReader):
         data: bytes | list[bytes] | None = None,
         mime_type: str | list[str] | None = None,
         config: ExtractionConfig,
-    ) -> list[tuple[Any, Path | None, bytes | None]]:
+    ) -> list[tuple[ExtractionResult, Path | None, bytes | None]]:
         task = self._prepare_extractions(file_path=file_path, data=data, mime_type=mime_type)
         match task.kind:
             case "file":
@@ -466,7 +331,7 @@ class KreuzbergReader(BasePydanticReader):
                 )
                 return [(r, None, d) for r, d in zip(results, task.data_list, strict=True) if r]
 
-    async def _safe_extract_async(self, coro: Any, source: str) -> Any | None:
+    async def _safe_extract_async(self, coro: Awaitable[ExtractionResult], source: str) -> ExtractionResult | None:
         try:
             return await coro
         except Exception:
@@ -475,7 +340,11 @@ class KreuzbergReader(BasePydanticReader):
             logger.warning("Failed to extract %s", source, exc_info=True)
             return None
 
-    async def _safe_batch_extract_async(self, coro: Any, sources: list[str]) -> list[Any | None]:
+    async def _safe_batch_extract_async(
+        self,
+        coro: Awaitable[Iterable[ExtractionResult]],
+        sources: list[str],
+    ) -> list[ExtractionResult | None]:
         try:
             return list(await coro)
         except Exception:

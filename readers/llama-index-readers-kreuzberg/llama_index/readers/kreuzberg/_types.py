@@ -1,0 +1,46 @@
+"""Internal type definitions for KreuzbergReader metadata."""
+
+from typing import Any, TypedDict
+
+from kreuzberg import ExtractedImage, ExtractedTable, Metadata
+
+
+class WarningDict(TypedDict):
+    source: str
+    message: str
+
+
+class KeywordDict(TypedDict):
+    text: str
+    score: float
+    algorithm: str
+
+
+class AnnotationDict(TypedDict):
+    annotation_type: str
+    content: str | None
+    page_number: int
+
+
+class PageContent(TypedDict):
+    page_number: int
+    content: str
+    tables: list[ExtractedTable]
+    images: list[ExtractedImage]
+    is_blank: bool
+
+
+class DocumentMetadata(Metadata, total=False):  # type: ignore[misc,call-arg]
+    file_name: str
+    file_path: str
+    file_type: str
+    total_pages: int
+    page_number: int
+    quality_score: float | None
+    detected_languages: list[str] | None
+    output_format: str
+    processing_warnings: list[WarningDict] | None
+    extracted_keywords: list[KeywordDict] | None
+    annotations: list[AnnotationDict] | None
+    images: list[dict[str, Any]] | None
+    _kreuzberg_elements: list[Any] | None

@@ -52,6 +52,7 @@ lint.per-file-ignores."node_parsers/**/tests/**" = [
 [tool.mypy]
 python_version = "3.10"
 strict = true
+explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = ["kreuzberg", "kreuzberg.*"]

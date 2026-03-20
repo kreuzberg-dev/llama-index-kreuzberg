@@ -1,9 +1,14 @@
 """Element-aware node parser for kreuzberg-extracted documents."""
 
-from __future__ import annotations
-
 import logging
-from typing import Any, List, Sequence
+import sys
+from collections.abc import Sequence
+from typing import Any
+
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
 
 from llama_index.core.node_parser import NodeParser
 from llama_index.core.schema import BaseNode, Document, NodeRelationship, TextNode
@@ -11,7 +16,7 @@ from llama_index.core.utils import get_tqdm_iterable
 
 logger = logging.getLogger(__name__)
 
-_ELEMENT_METADATA_KEYS = ["element_type", "page_number", "element_index"]
+_ELEMENT_METADATA_KEYS = ("element_type", "page_number", "element_index")
 
 _MISSING_ELEMENTS_WARNING = (
     "Document %s has no '_kreuzberg_elements' metadata. "
@@ -34,14 +39,16 @@ class KreuzbergNodeParser(NodeParser):
 
     @classmethod
     def class_name(cls) -> str:
+        """Return the unique class identifier for serialisation."""
         return "KreuzbergNodeParser"
 
+    @override
     def _parse_nodes(
         self,
         nodes: Sequence[BaseNode],
         show_progress: bool = False,
         **kwargs: Any,
-    ) -> List[BaseNode]:
+    ) -> list[BaseNode]:
         output: list[BaseNode] = []
         nodes_with_progress = get_tqdm_iterable(nodes, show_progress, "Parsing nodes")
 
@@ -54,7 +61,7 @@ class KreuzbergNodeParser(NodeParser):
                 continue
 
             source_ref = node.as_related_node_info()
-            excluded_embed = list(node.excluded_embed_metadata_keys) + _ELEMENT_METADATA_KEYS
+            excluded_embed = list(node.excluded_embed_metadata_keys) + list(_ELEMENT_METADATA_KEYS)
             idx = 0
 
             for el in elements:
@@ -84,8 +91,8 @@ class KreuzbergNodeParser(NodeParser):
         return output
 
     @staticmethod
-    def _strip_elements_metadata(nodes: List[BaseNode]) -> List[BaseNode]:
-        """Remove _kreuzberg_elements from child TextNodes only (N5).
+    def _strip_elements_metadata(nodes: list[BaseNode]) -> list[BaseNode]:
+        """Remove _kreuzberg_elements from child TextNodes only.
 
         Passthrough documents keep their metadata untouched.
         """
@@ -94,24 +101,24 @@ class KreuzbergNodeParser(NodeParser):
                 node.metadata.pop("_kreuzberg_elements", None)
         return nodes
 
+    @override
     def get_nodes_from_documents(
         self,
         documents: Sequence[Document],
         show_progress: bool = False,
         **kwargs: Any,
-    ) -> List[BaseNode]:
-        nodes = super().get_nodes_from_documents(
-            documents, show_progress=show_progress, **kwargs
-        )
+    ) -> list[BaseNode]:
+        """Parse documents into nodes, stripping internal element metadata."""
+        nodes = super().get_nodes_from_documents(documents, show_progress=show_progress, **kwargs)
         return self._strip_elements_metadata(nodes)
 
+    @override
     async def aget_nodes_from_documents(
         self,
         documents: Sequence[Document],
         show_progress: bool = False,
         **kwargs: Any,
-    ) -> List[BaseNode]:
-        nodes = await super().aget_nodes_from_documents(
-            documents, show_progress=show_progress, **kwargs
-        )
+    ) -> list[BaseNode]:
+        """Async version of :meth:`get_nodes_from_documents`."""
+        nodes = await super().aget_nodes_from_documents(documents, show_progress=show_progress, **kwargs)
         return self._strip_elements_metadata(nodes)

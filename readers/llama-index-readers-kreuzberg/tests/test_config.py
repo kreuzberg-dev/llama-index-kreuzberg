@@ -5,6 +5,7 @@ import json
 from kreuzberg import (
     ExtractionConfig,
     HierarchyConfig,
+    ImagePreprocessingConfig,
     OcrConfig,
     PageConfig,
     PdfConfig,
@@ -122,3 +123,63 @@ def test_default_config_round_trip() -> None:
     serialized = json.loads(config_to_json(original))
     reconstructed = dict_to_config(serialized)
     assert isinstance(reconstructed, ExtractionConfig)
+
+
+def test_tesseract_with_preprocessing_reconstructed() -> None:
+    config = dict_to_config(
+        {
+            "ocr": {
+                "backend": "tesseract",
+                "tesseract_config": {
+                    "psm": 6,
+                    "preprocessing": {
+                        "target_dpi": 600,
+                        "deskew": False,
+                        "denoise": True,
+                    },
+                },
+            },
+        }
+    )
+    assert isinstance(config.ocr.tesseract_config, TesseractConfig)
+    assert isinstance(config.ocr.tesseract_config.preprocessing, ImagePreprocessingConfig)
+    assert config.ocr.tesseract_config.preprocessing.target_dpi == 600
+    assert config.ocr.tesseract_config.preprocessing.deskew is False
+    assert config.ocr.tesseract_config.preprocessing.denoise is True
+
+
+def test_none_sub_config_stays_none() -> None:
+    config = dict_to_config({"ocr": None, "pages": None, "pdf_options": None})
+    assert config.ocr is None
+    assert config.pages is None
+    assert config.pdf_options is None
+
+
+def test_deeply_nested_round_trip() -> None:
+    original = ExtractionConfig(
+        ocr=OcrConfig(
+            backend="tesseract",
+            language="deu",
+            tesseract_config=TesseractConfig(
+                psm=6,
+                oem=1,
+                preprocessing=ImagePreprocessingConfig(
+                    target_dpi=600,
+                    deskew=False,
+                    denoise=True,
+                    binarization_method="sauvola",
+                ),
+            ),
+        ),
+    )
+    serialized = json.loads(config_to_json(original))
+    reconstructed = dict_to_config(serialized)
+
+    assert reconstructed.ocr.backend == "tesseract"
+    assert reconstructed.ocr.language == "deu"
+    assert reconstructed.ocr.tesseract_config.psm == 6
+    assert reconstructed.ocr.tesseract_config.oem == 1
+    assert reconstructed.ocr.tesseract_config.preprocessing.target_dpi == 600
+    assert reconstructed.ocr.tesseract_config.preprocessing.deskew is False
+    assert reconstructed.ocr.tesseract_config.preprocessing.denoise is True
+    assert reconstructed.ocr.tesseract_config.preprocessing.binarization_method == "sauvola"
