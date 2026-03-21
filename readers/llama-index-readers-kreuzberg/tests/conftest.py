@@ -3,8 +3,7 @@
 from unittest.mock import MagicMock
 
 from kreuzberg import ExtractedImage, ExtractedTable, ExtractionResult, Metadata
-
-from llama_index.readers.kreuzberg._types import Annotation, Keyword, PageContent, Warning
+from llama_index.readers.kreuzberg._types import Annotation, Keyword, PageContent, ProcessingWarning
 
 
 def make_extraction_result(
@@ -18,7 +17,7 @@ def make_extraction_result(
     quality_score: float | None = 0.95,
     detected_languages: list[str] | None = None,
     extracted_keywords: list[Keyword] | None = None,
-    processing_warnings: list[Warning] | None = None,
+    processing_warnings: list[ProcessingWarning] | None = None,
     annotations: list[Annotation] | None = None,
     page_count: int = 1,
 ) -> MagicMock:

@@ -102,8 +102,6 @@ class KreuzbergNodeParser(NodeParser):
         return nodes
 
     @override
-    def _postprocess_parsed_nodes(
-        self, nodes: list[BaseNode], parent_doc_map: dict[str, Document]
-    ) -> list[BaseNode]:
+    def _postprocess_parsed_nodes(self, nodes: list[BaseNode], parent_doc_map: dict[str, Document]) -> list[BaseNode]:
         nodes = super()._postprocess_parsed_nodes(nodes, parent_doc_map)
         return self._strip_elements_metadata(nodes)

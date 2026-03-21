@@ -5,7 +5,7 @@ from typing import Any, TypedDict
 from kreuzberg import ExtractedImage, ExtractedTable, Metadata
 
 
-class Warning(TypedDict):
+class ProcessingWarning(TypedDict):
     source: str
     message: str
 
@@ -39,7 +39,7 @@ class DocumentMetadata(Metadata, total=False):  # type: ignore[misc,call-arg]
     quality_score: float | None
     detected_languages: list[str] | None
     output_format: str
-    processing_warnings: list[Warning] | None
+    processing_warnings: list[ProcessingWarning] | None
     extracted_keywords: list[Keyword] | None
     annotations: list[Annotation] | None
     images: list[dict[str, Any]] | None

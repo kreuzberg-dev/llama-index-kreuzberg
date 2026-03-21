@@ -9,7 +9,7 @@ from llama_index.readers.kreuzberg._types import (
     Annotation,
     DocumentMetadata,
     Keyword,
-    Warning,
+    ProcessingWarning,
 )
 
 from kreuzberg import ExtractedImage, ExtractedTable, ExtractionResult
@@ -78,7 +78,9 @@ def build_metadata(  # noqa: C901
     meta["output_format"] = result.output_format
     if result.processing_warnings:
         meta["processing_warnings"] = [
-            Warning(source=w.source, message=w.message) for w in result.processing_warnings if hasattr(w, "source")
+            ProcessingWarning(source=w.source, message=w.message)
+            for w in result.processing_warnings
+            if hasattr(w, "source")
         ]
     if result.extracted_keywords:
         meta["extracted_keywords"] = [
