@@ -1,0 +1,27 @@
+name: Publish Reader to PyPI
+
+on:
+  push:
+    tags:
+      - "reader-v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment:
+      name: pypi
+      url: https://pypi.org/p/llama-index-readers-kreuzberg
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Build package
+        run: cd readers/llama-index-readers-kreuzberg && uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: readers/llama-index-readers-kreuzberg/dist/
