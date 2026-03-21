@@ -1,5 +1,28 @@
 # LlamaIndex Readers Kreuzberg
 
+<div align="center" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 20px 0;">
+  <a href="https://pypi.org/project/llama-index-readers-kreuzberg/">
+    <img src="https://img.shields.io/pypi/v/llama-index-readers-kreuzberg?label=Reader&color=007ec6" alt="Reader">
+  </a>
+  <a href="https://pypi.org/project/kreuzberg/">
+    <img src="https://img.shields.io/pypi/v/kreuzberg?label=Kreuzberg&color=007ec6" alt="Kreuzberg">
+  </a>
+  <a href="https://github.com/kreuzberg-dev/llama-index-kreuzberg/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
+  </a>
+  <a href="https://docs.kreuzberg.dev">
+    <img src="https://img.shields.io/badge/docs-kreuzberg.dev-blue" alt="Documentation">
+  </a>
+</div>
+
+<img width="3384" height="573" alt="Kreuzberg Banner" src="https://github.com/user-attachments/assets/1b6c6ad7-3b6d-4171-b1c9-f2026cc9deb8" />
+
+<div align="center" style="margin-top: 20px;">
+  <a href="https://discord.gg/xt9WY3GnKR">
+    <img height="22" src="https://img.shields.io/badge/Discord-Join%20our%20community-7289da?logo=discord&logoColor=white" alt="Discord">
+  </a>
+</div>
+
 LlamaIndex reader for 88+ document formats powered by [kreuzberg](https://github.com/kreuzberg-dev/kreuzberg)'s Rust extraction engine.
 
 ## Installation
