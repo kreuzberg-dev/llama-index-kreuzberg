@@ -19,7 +19,9 @@ keywords = [
   "text-extraction",
 ]
 license = "MIT"
-authors = [{ name = "Kreuzberg.dev", email = "admin@kreuzberg.dev" }]
+authors = [
+  { name = "Kreuzberg.dev", email = "contact@kreuzberg.dev" },
+]
 requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -42,7 +44,10 @@ dependencies = [
   "kreuzberg>=4.4.6",
   "llama-index-core>=0.13.0,<0.15",
 ]
-maintainers = [{ name = "Goldziher" }]
+maintainers = [
+  { name = "Na'aman Hirschfeld", email = "naaman@kreuzberg.dev" },
+  { name = "Varun Tandon", email = "varun@kreuzberg.dev" },
+]
 urls.Homepage = "https://github.com/kreuzberg-dev/llama-index-kreuzberg"
 urls.Issues = "https://github.com/kreuzberg-dev/llama-index-kreuzberg/issues"
 urls.Kreuzberg = "https://github.com/kreuzberg-dev/kreuzberg"
@@ -74,4 +79,4 @@ contains_example = false
 import_path = "llama_index.readers.kreuzberg"
 
 [tool.llamahub.class_authors]
-KreuzbergReader = "Goldziher"
+KreuzbergReader = "v-tan"

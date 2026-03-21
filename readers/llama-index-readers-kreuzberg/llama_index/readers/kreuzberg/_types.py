@@ -5,18 +5,18 @@ from typing import Any, TypedDict
 from kreuzberg import ExtractedImage, ExtractedTable, Metadata
 
 
-class WarningDict(TypedDict):
+class Warning(TypedDict):
     source: str
     message: str
 
 
-class KeywordDict(TypedDict):
+class Keyword(TypedDict):
     text: str
     score: float
     algorithm: str
 
 
-class AnnotationDict(TypedDict):
+class Annotation(TypedDict):
     annotation_type: str
     content: str | None
     page_number: int
@@ -39,8 +39,8 @@ class DocumentMetadata(Metadata, total=False):  # type: ignore[misc,call-arg]
     quality_score: float | None
     detected_languages: list[str] | None
     output_format: str
-    processing_warnings: list[WarningDict] | None
-    extracted_keywords: list[KeywordDict] | None
-    annotations: list[AnnotationDict] | None
+    processing_warnings: list[Warning] | None
+    extracted_keywords: list[Keyword] | None
+    annotations: list[Annotation] | None
     images: list[dict[str, Any]] | None
     _kreuzberg_elements: list[Any] | None

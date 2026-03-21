@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from llama_index.readers.kreuzberg._types import (
-    AnnotationDict,
+    Annotation,
     DocumentMetadata,
-    KeywordDict,
-    WarningDict,
+    Keyword,
+    Warning,
 )
 
 from kreuzberg import ExtractedImage, ExtractedTable, ExtractionResult
@@ -78,17 +78,17 @@ def build_metadata(  # noqa: C901
     meta["output_format"] = result.output_format
     if result.processing_warnings:
         meta["processing_warnings"] = [
-            WarningDict(source=w.source, message=w.message) for w in result.processing_warnings if hasattr(w, "source")
+            Warning(source=w.source, message=w.message) for w in result.processing_warnings if hasattr(w, "source")
         ]
     if result.extracted_keywords:
         meta["extracted_keywords"] = [
-            KeywordDict(text=kw.text, score=kw.score, algorithm=kw.algorithm)
+            Keyword(text=kw.text, score=kw.score, algorithm=kw.algorithm)
             for kw in result.extracted_keywords
             if hasattr(kw, "text")
         ]
     if result.annotations:
         meta["annotations"] = [
-            AnnotationDict(
+            Annotation(
                 annotation_type=a.annotation_type,
                 content=a.content,
                 page_number=a.page_number,

@@ -1,24 +1,25 @@
 """Shared test fixtures for KreuzbergReader tests."""
 
-from typing import Any
 from unittest.mock import MagicMock
 
-from kreuzberg import ExtractionResult
+from kreuzberg import ExtractedImage, ExtractedTable, ExtractionResult, Metadata
+
+from llama_index.readers.kreuzberg._types import Annotation, Keyword, PageContent, Warning
 
 
 def make_extraction_result(
     content: str = "Hello world",
     mime_type: str = "application/pdf",
-    metadata: dict[str, Any] | None = None,
-    pages: list[Any] | None = None,
-    elements: list[Any] | None = None,
-    tables: list[Any] | None = None,
-    images: list[Any] | None = None,
+    metadata: Metadata | None = None,
+    pages: list[PageContent] | None = None,
+    elements: list[dict] | None = None,
+    tables: list[ExtractedTable] | None = None,
+    images: list[ExtractedImage] | None = None,
     quality_score: float | None = 0.95,
     detected_languages: list[str] | None = None,
-    extracted_keywords: list[Any] | None = None,
-    processing_warnings: list[Any] | None = None,
-    annotations: list[Any] | None = None,
+    extracted_keywords: list[Keyword] | None = None,
+    processing_warnings: list[Warning] | None = None,
+    annotations: list[Annotation] | None = None,
     page_count: int = 1,
 ) -> MagicMock:
     """Create a mock ExtractionResult with sensible defaults."""
@@ -55,11 +56,11 @@ def make_extraction_result(
 def make_page_content(
     page_number: int = 1,
     content: str = "Page content",
-    tables: list[Any] | None = None,
-    images: list[Any] | None = None,
+    tables: list[ExtractedTable] | None = None,
+    images: list[ExtractedImage] | None = None,
     *,
     is_blank: bool = False,
-) -> dict[str, Any]:
+) -> PageContent:
     """Create a PageContent dict matching kreuzberg's runtime format."""
     return {
         "page_number": page_number,
