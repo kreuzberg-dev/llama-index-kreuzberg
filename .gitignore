@@ -16,6 +16,13 @@ htmlcov/
 .coverage.*
 coverage.xml
 
+
+# Additional generated artifacts
+.remote-cache/
+.alef/
+.gemini/
+GEMINI.md
+
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/
 .claude/
@@ -36,9 +43,3 @@ AGENTS.md
 CLAUDE.md
 GEMINI.md
 # END ai-rulez
-
-# Additional generated artifacts
-.remote-cache/
-.alef/
-.gemini/
-GEMINI.md
