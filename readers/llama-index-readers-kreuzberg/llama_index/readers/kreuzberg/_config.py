@@ -13,6 +13,7 @@ import functools
 import inspect
 from typing import Any
 
+import kreuzberg as _kreuzberg
 from kreuzberg import (
     ChunkingConfig,
     EmbeddingConfig,
@@ -45,8 +46,6 @@ _TOP_LEVEL_CONFIGS: dict[str, type] = {
     "postprocessor": PostProcessorConfig,
     "token_reduction": TokenReductionConfig,
 }
-
-import kreuzberg as _kreuzberg
 
 _OPTIONAL_TOP_LEVEL: list[tuple[str, str]] = [
     ("acceleration", "AccelerationConfig"),
