@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "llama-index-readers-kreuzberg"
-version = "0.1.0"
+version = "0.1.1"
 description = "LlamaIndex reader for 88+ document formats powered by kreuzberg's Rust extraction engine"
 readme = "README.md"
 keywords = [
@@ -45,7 +45,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "kreuzberg>=4.4.6",
+  "kreuzberg>=4.9.4",
   "llama-index-core>=0.13,<0.15",
 ]
 urls.Homepage = "https://github.com/kreuzberg-dev/llama-index-kreuzberg"
