@@ -67,6 +67,12 @@ check-filenames = true
 check-hidden = true
 skip = "*.csv,*.html,*.json,*.jsonl,*.pdf,*.txt,*.ipynb"
 
+[tool.mypy]
+disallow_untyped_defs = true
+exclude = [ "_static", "build", "examples", "notebooks", "venv" ]
+ignore_missing_imports = true
+python_version = "3.10"
+
 [tool.pytest]
 ini_options.testpaths = [ "tests" ]
 ini_options.asyncio_mode = "auto"
@@ -74,12 +80,6 @@ ini_options.asyncio_mode = "auto"
 [tool.coverage]
 run.source = [ "llama_index/node_parser/kreuzberg" ]
 report.fail_under = 80
-
-[tool.mypy]
-disallow_untyped_defs = true
-exclude = [ "_static", "build", "examples", "notebooks", "venv" ]
-ignore_missing_imports = true
-python_version = "3.10"
 
 [tool.llamahub]
 contains_example = false

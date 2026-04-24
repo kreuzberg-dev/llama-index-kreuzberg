@@ -10,8 +10,10 @@ derived from annotations.
 """
 
 import functools
+import inspect
 from typing import Any
 
+import kreuzberg as _kreuzberg
 from kreuzberg import (
     ChunkingConfig,
     EmbeddingConfig,
@@ -45,27 +47,20 @@ _TOP_LEVEL_CONFIGS: dict[str, type] = {
     "token_reduction": TokenReductionConfig,
 }
 
-# v4.5.0 additions — guarded so the reader works with both 4.4.x and 4.5.x.
-try:
-    from kreuzberg import EmailConfig
+_OPTIONAL_TOP_LEVEL: list[tuple[str, str]] = [
+    ("acceleration", "AccelerationConfig"),
+    ("concurrency", "ConcurrencyConfig"),
+    ("content_filter", "ContentFilterConfig"),
+    ("email", "EmailConfig"),
+    ("html_output", "HtmlOutputConfig"),
+    ("layout", "LayoutDetectionConfig"),
+    ("tree_sitter", "TreeSitterConfig"),
+]
 
-    _TOP_LEVEL_CONFIGS["email"] = EmailConfig
-except ImportError:
-    pass
-
-try:
-    from kreuzberg import AccelerationConfig
-
-    _TOP_LEVEL_CONFIGS["acceleration"] = AccelerationConfig
-except ImportError:
-    pass
-
-try:
-    from kreuzberg import LayoutDetectionConfig
-
-    _TOP_LEVEL_CONFIGS["layout"] = LayoutDetectionConfig
-except ImportError:
-    pass
+for _field, _cls_name in _OPTIONAL_TOP_LEVEL:
+    _cls = getattr(_kreuzberg, _cls_name, None)
+    if _cls is not None:
+        _TOP_LEVEL_CONFIGS[_field] = _cls
 
 # Nested config fields on sub-config classes: (class, field_name) -> inner class.
 # Required because PyO3 classes reject raw dicts for typed constructor arguments.
@@ -78,17 +73,23 @@ _NESTED_FIELD_MAP: dict[tuple[type, str], type] = {
     (KeywordConfig, "yake_params"): YakeParams,
 }
 
+_tsc = getattr(_kreuzberg, "TreeSitterConfig", None)
+_tspc = getattr(_kreuzberg, "TreeSitterProcessConfig", None)
+if _tsc is not None and _tspc is not None:
+    _NESTED_FIELD_MAP[(_tsc, "process")] = _tspc
+
 
 @functools.lru_cache(maxsize=32)
 def _known_fields(cls: type) -> frozenset[str]:
     """Return the set of field names accepted by a PyO3 config class constructor.
 
-    Uses a default instance's dir() output as a proxy for constructor parameters,
-    since get_type_hints() returns an empty dict for PyO3 classes.
+    Uses inspect.signature() to get actual constructor parameters. PyO3 classes
+    may expose read-only attributes (e.g. computed properties) in dir() that are
+    not valid constructor kwargs, so dir() is not a reliable proxy.
     """
     try:
-        return frozenset(a for a in dir(cls()) if not a.startswith("_"))
-    except Exception:  # noqa: BLE001 — PyO3 classes may raise arbitrary exceptions
+        return frozenset(inspect.signature(cls).parameters)
+    except (ValueError, TypeError):
         return frozenset()
 
 

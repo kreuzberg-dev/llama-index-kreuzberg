@@ -4,6 +4,17 @@ All notable changes to llama-index-readers-kreuzberg will be documented in this 
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-04-23
+
+### Changed
+
+- Minimum kreuzberg version bumped to `>=4.9.4`
+
+### Fixed
+
+- Config round-trips (`to_dict` / `from_dict`) no longer raise `TypeError` against kreuzberg ≥4.5 — new sub-config types (`ConcurrencyConfig`, `ContentFilterConfig`, `HtmlOutputConfig`, `TreeSitterConfig`) are now recognised during reconstruction
+- Documents with embedded images (e.g. `.docx`) no longer fail silently — `ExtractedImage` fields are optional in kreuzberg 4.9.x and are now handled correctly
+
 ## [0.1.0] — 2026-03-20
 
 Initial release.

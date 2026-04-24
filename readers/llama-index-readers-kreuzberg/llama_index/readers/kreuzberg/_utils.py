@@ -19,21 +19,21 @@ def serialize_images(images: list[ExtractedImage], page_number: int | None = Non
     """Serialize image objects to JSON-safe dicts, filtering by page when given."""
     serialized = []
     for img in images:
-        if page_number is not None and img["page_number"] != page_number:
+        if page_number is not None and img.get("page_number") != page_number:
             continue
+        raw_data = img.get("data")
         entry: dict[str, Any] = {
-            "format": img["format"],
-            "image_index": img["image_index"],
-            "page_number": img["page_number"],
-            "width": img["width"],
-            "height": img["height"],
-            "colorspace": img["colorspace"],
-            "bits_per_component": img["bits_per_component"],
-            "is_mask": img["is_mask"],
-            "description": img["description"],
-            "data": base64.b64encode(img["data"]).decode("ascii"),
+            "format": img.get("format"),
+            "image_index": img.get("image_index"),
+            "page_number": img.get("page_number"),
+            "width": img.get("width"),
+            "height": img.get("height"),
+            "colorspace": img.get("colorspace"),
+            "bits_per_component": img.get("bits_per_component"),
+            "is_mask": img.get("is_mask"),
+            "description": img.get("description"),
+            "data": base64.b64encode(raw_data).decode("ascii") if raw_data is not None else None,
         }
-        # bounding_box and ocr_result are v4.5.0 additions, not in all versions
         bbox = img.get("bounding_box")
         if bbox is not None:
             entry["bounding_box"] = bbox
