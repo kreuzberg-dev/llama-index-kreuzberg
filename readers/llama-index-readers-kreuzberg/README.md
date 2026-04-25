@@ -23,7 +23,7 @@
   </a>
 </div>
 
-LlamaIndex reader for 88+ document formats powered by [kreuzberg](https://github.com/kreuzberg-dev/kreuzberg)'s Rust extraction engine.
+LlamaIndex reader for 91+ file formats powered by [kreuzberg](https://github.com/kreuzberg-dev/kreuzberg)'s Rust extraction engine.
 
 ## Installation
 
@@ -31,11 +31,11 @@ LlamaIndex reader for 88+ document formats powered by [kreuzberg](https://github
 pip install llama-index-readers-kreuzberg
 ```
 
-Requires `kreuzberg>=4.4.6` and `llama-index-core>=0.13.0,<0.15`.
+Requires Python ≥3.10, `kreuzberg>=4.9.4`, and `llama-index-core>=0.13,<0.15`.
 
 ## Features
 
-- **88+ formats** -- PDF, DOCX, PPTX, XLSX, HTML, images, and more ([full list](https://github.com/kreuzberg-dev/kreuzberg))
+- **91+ file formats** -- PDF, DOCX, PPTX, XLSX, HTML, images, emails, archives, and more ([full list](https://docs.kreuzberg.dev/reference/formats/))
 - **Rich metadata** -- quality scores, language detection, keywords, annotations
 - **Element extraction** -- structural elements for structure-aware RAG pipelines
 - **Image extraction** -- base64-encoded image data with position, format, and OCR metadata

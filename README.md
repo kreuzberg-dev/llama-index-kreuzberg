@@ -26,14 +26,14 @@
   </a>
 </div>
 
-LlamaIndex integrations for [kreuzberg](https://github.com/kreuzberg-dev/kreuzberg) — a Rust-core document intelligence library supporting 88+ file formats with OCR, layout detection, and element-based extraction.
+LlamaIndex integrations for [kreuzberg](https://github.com/kreuzberg-dev/kreuzberg) — a Rust-core document intelligence library supporting 91+ file formats with OCR, layout detection, element-based extraction, and code intelligence across 248 programming languages.
 
 ## Packages
 
-| Package | Description | PyPI |
-|---------|-------------|------|
-| `llama-index-readers-kreuzberg` | Reader that converts documents into LlamaIndex Documents with rich metadata and optional element extraction | [![PyPI](https://img.shields.io/pypi/v/llama-index-readers-kreuzberg)](https://pypi.org/p/llama-index-readers-kreuzberg) |
-| `llama-index-node-parser-kreuzberg` | Element-aware node parser that maps structural elements (headings, paragraphs, tables, code blocks) to TextNodes with type metadata and sequential relationships | [![PyPI](https://img.shields.io/pypi/v/llama-index-node-parser-kreuzberg)](https://pypi.org/p/llama-index-node-parser-kreuzberg) |
+| Package | Description | PyPI | Docs |
+|---------|-------------|------|------|
+| `llama-index-readers-kreuzberg` | Reader that converts documents into LlamaIndex Documents with rich metadata and optional element extraction | [![PyPI](https://img.shields.io/pypi/v/llama-index-readers-kreuzberg)](https://pypi.org/p/llama-index-readers-kreuzberg) | [README](readers/llama-index-readers-kreuzberg/README.md) |
+| `llama-index-node-parser-kreuzberg` | Element-aware node parser that maps structural elements (headings, paragraphs, tables, code blocks) to TextNodes with type metadata and sequential relationships | [![PyPI](https://img.shields.io/pypi/v/llama-index-node-parser-kreuzberg)](https://pypi.org/p/llama-index-node-parser-kreuzberg) | [README](node_parsers/llama-index-node-parser-kreuzberg/README.md) |
 
 ## Installation
 
@@ -43,6 +43,8 @@ pip install llama-index-readers-kreuzberg
 # Optional: element-aware node parsing
 pip install llama-index-node-parser-kreuzberg
 ```
+
+Requires Python ≥3.10, `kreuzberg>=4.9.4`, and `llama-index-core>=0.13,<0.15`.
 
 ## Quick Start
 
@@ -84,6 +86,15 @@ nodes = pipeline.run(documents=documents)
 
 - **Reader alone** with built-in splitters (e.g. `SentenceSplitter`): simpler setup, text-level chunking.
 - **Reader + node parser**: structure-aware chunking with element types preserved for filtering and retrieval.
+
+## Documentation
+
+For the full feature list, configuration options, metadata reference, and advanced usage, see the per-package READMEs:
+
+- **Reader** — async, batch, raw-bytes input, OCR config, per-page splitting, image extraction, error tolerance, serialization, full metadata reference: [`readers/llama-index-readers-kreuzberg/README.md`](readers/llama-index-readers-kreuzberg/README.md)
+- **Node parser** — element-aware splitting, IngestionPipeline / VectorStoreIndex composition, async, behavior notes: [`node_parsers/llama-index-node-parser-kreuzberg/README.md`](node_parsers/llama-index-node-parser-kreuzberg/README.md)
+
+Upstream kreuzberg documentation: [docs.kreuzberg.dev](https://docs.kreuzberg.dev).
 
 ## License
 
